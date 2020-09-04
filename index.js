@@ -93,71 +93,69 @@ function checkIfInitialized() {
 }
 
 export default class OneSignal {
-
     /**
-     Listen to events of received, opened, ids, subscription, permission, emailSubscription, inAppMessageClicked
-     TODO: We currently have implemented the steps up until connecting the "SUBSCRIPTION_EVENT" and "PERMISSION_EVENT"
-     Currently the getPermissionSubscriptionState is used to get all device information and
-        needs to be broken up into using the native observers to fire these React-Native handlers
+     * Sets the OneSignal app id. 1/2 of the initialization process.
+     * @param {string} appId
      */
-    static addEventListener(type, handler) {
-        if (!checkIfInitialized()) return;
-
-        invariant(
-            type === NOTIFICATION_RECEIVED_EVENT ||
-            type === NOTIFICATION_OPENED_EVENT ||
-            type === IDS_AVAILABLE_EVENT ||
-//            type === SUBSCRIPTION_EVENT ||
-//            type === PERMISSION_EVENT ||
-            type === EMAIL_SUBSCRIPTION_EVENT ||
-            type === IN_APP_MESSAGE_CLICKED_EVENT,
-            'OneSignal only supports received, opened, ids, emailSubscription, and inAppMessageClicked events'
-        );
-
-        _eventTypeHandler.set(type, handler);
-
-        // Make native request to init notification opened handler
-        if (type === NOTIFICATION_OPENED_EVENT) {
-            RNOneSignal.initNotificationOpenedHandlerParams();
-        }
-
-        // Make native request to init idsAvailable handler
-        if (type === IDS_AVAILABLE_EVENT) {
-            RNOneSignal.idsAvailable();
-        }
-
-        // Make native request to init IAM handler
-        if (type === IN_APP_MESSAGE_CLICKED_EVENT) {
-            if (Platform.OS === 'android') {
-                RNOneSignal.initInAppMessageClickHandlerParams();
-            } else if (Platform.OS === 'ios') {
-                RNOneSignal.setInAppMessageClickHandler();
-            }
-        }
-
-        // Check if there is a cache for this type of event
-        var cache = _notificationCache.get(type);
-        if (handler && cache) {
-            handler(cache);
-            _notificationCache.delete(type);
-        }
+    static setAppId(appId) {
+        // TODO: if order doesn't matter, confirm: we don't have to wait for initialization here.
+        RNOneSignal.setAppId(appId);
     }
 
-    static removeEventListener(type) {
+    /**
+     * Gets the device state.
+     * // TO DO: add more details here
+     */
+    static getDeviceState() {
+        // TODO: check if we need to return promise?
+        if (!checkIfInitialized()) return Promise.resolve();
+        return RNOneSignal.getDeviceState();
+    }
+
+    static setInAppMessageClickHandler(callback) {
         if (!checkIfInitialized()) return;
-
         invariant(
-            type === NOTIFICATION_RECEIVED_EVENT ||
-            type === NOTIFICATION_OPENED_EVENT ||
-            type === IDS_AVAILABLE_EVENT ||
-//            type === SUBSCRIPTION_EVENT ||
-//            type === PERMISSION_EVENT ||
-            type === EMAIL_SUBSCRIPTION_EVENT ||
-            type === IN_APP_MESSAGE_CLICKED_EVENT,
-            'OneSignal only supports received, opened, ids, emailSubscription, and inAppMessageClicked events'
+            typeof callback === 'function',
+            'Must provide a valid callback'
         );
+        // TO DO: need this?
+        //_eventTypeHandler.set(IN_APP_MESSAGE_CLICKED_EVENT, handler);
 
-        _eventTypeHandler.delete(type);
+        RNOneSignal.setInAppMessageClickHandler(callback);
+    }
+
+    static setNotificationWillShowInForegroundHandler(callback){
+        if (!checkIfInitialized()) return;
+        invariant(
+            typeof callback === 'function',
+            'Must provide a valid callback'
+        );
+        // TO DO: need this?
+        //_eventTypeHandler.set(NOTIFICATION_RECEIVED_EVENT, handler);
+
+        RNOneSignal.setNotificationWillShowInForegroundHandler(callback);
+    }
+
+    static setNotificationOpenedHandler(callback){
+        if (!checkIfInitialized()) return;
+        invariant(
+            typeof callback === 'function',
+            'Must provide a valid callback'
+        );
+        // TO DO: need this?
+        RNOneSignal.initNotificationOpenedHandlerParams();
+        //_eventTypeHandler.set(NOTIFICATION_OPENED_EVENT, handler);
+
+        RNOneSignal.setNotificationOpenedHandler(callback);
+    }
+
+    // deprecated
+    static addEventListener() {
+        console.error("OneSignal: `addEventListener` is deprecated. Please migrate to the new implementation.")
+    }
+
+    static removeEventListener() {
+        console.error("OneSignal: this function is deprecated.")
     }
 
     static clearListeners() {
@@ -215,20 +213,12 @@ export default class OneSignal {
             console.log("This function is not supported on Android");
         }
     }
-
-    /* deprecated */
-    static configure() {
-        console.warn("OneSignal: the `configure` method has been deprecated. The `ids` event is now triggered automatically.");
-    }
-
-    static init(appId, iOSSettings) {
+    /**
+     * Initializes OneSignal. 1/2 of the initialization process. Use `setAppId` to set the OneSignal application id.
+     */
+    static init() {
         if (!checkIfInitialized()) return;
-
-        if (Platform.OS === 'ios') {
-            RNOneSignal.initWithAppId(appId, iOSSettings);
-        } else {
-            RNOneSignal.init(appId);
-        }
+        RNOneSignal.init();
     }
 
     static checkPermissions(callback) {
@@ -361,17 +351,8 @@ export default class OneSignal {
         RNOneSignal.promptLocation();
     }
 
-    static inFocusDisplaying(displayOption) {
-        if (!checkIfInitialized()) return;
-
-        if (Platform.OS === 'android') {
-            //Android: Set Display option of the notifications. displayOption is of type OSInFocusDisplayOption
-            // 0 -> None, 1 -> InAppAlert, 2 -> Notification
-            RNOneSignal.inFocusDisplaying(displayOption);
-        } else {
-            //iOS: displayOption is a number, 0 -> None, 1 -> InAppAlert, 2 -> Notification
-            RNOneSignal.setInFocusDisplayType(displayOption);
-        }
+    static inFocusDisplaying() {
+        console.error("OneSignal: `inFocusDisplaying` is deprecated. Use `setNotificationWillShowInForegroundHandler` to dynamically pick the display type.");
     }
 
     static postNotification(contents, data, player_id, otherParameters) {
